@@ -67,21 +67,6 @@ Build output:
 - Use the bottom toolbar to switch between small gear, large gear, and delete
 - After the factory view unlocks, drag to pan, use the mouse wheel to zoom, and use `WASD` or arrow keys to move
 
-## Open Source Notes
-
-Recommended files to publish:
-
-- `gear-puzzle.html`
-- `gear-puzzle.js`
-- `gear-pipeline.js`
-- `dev-server.js`
-- `build-static.js`
-- `package.json`
-- `README.md`
-- `LICENSE`
-
-You may also publish `dist/` if you want a ready-to-run build in the repository, but it is not required for source-first open source hosting.
-
 ## License
 
 This project is released under the MIT License. See `LICENSE` for details.
@@ -156,21 +141,6 @@ npm run build
 - 点击六边形格子放置当前选中的齿轮
 - 使用底部工具栏切换小齿轮、大齿轮和删除模式
 - 解锁工厂视角后，可拖动画面平移、滚轮缩放，并使用 `WASD` 或方向键移动
-
-## 开源建议
-
-建议公开这些文件：
-
-- `gear-puzzle.html`
-- `gear-puzzle.js`
-- `gear-pipeline.js`
-- `dev-server.js`
-- `build-static.js`
-- `package.json`
-- `README.md`
-- `LICENSE`
-
-如果你希望仓库中直接附带可运行版本，也可以一并公开 `dist/`，但对于以源码为主的开源仓库来说不是必须。
 
 ## 许可证
 
