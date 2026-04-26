@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Meshworks</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body {
+                background: #2c2c2c;
+                overflow: hidden;
+                font-family: "Segoe UI", sans-serif;
+            }
+            #game-container {
+                position: relative;
+                width: 100vw;
+                height: 100vh;
+            }
+            #game-canvas {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+            }
+            #ui-layer {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+            }
+
+            #hud {
+                position: absolute;
+                top: 20px;
+                left: 20px;
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                flex-wrap: wrap;
+                pointer-events: all;
+                color: #c8bfb0;
+                font-size: 13px;
+                letter-spacing: 0.05em;
+            }
+            .hud-panel {
+                min-width: 320px;
+            }
+            .hud-panel-title {
+                margin-bottom: 8px;
+                padding-left: 4px;
+                color: #8d8578;
+                font-size: 11px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+            }
+            #hud .stat {
+                margin-bottom: 6px;
+                background: rgba(44, 44, 44, 0.88);
+                padding: 5px 12px;
+                border-radius: 4px;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                align-items: center;
+                column-gap: 12px;
+            }
+            #hud .stat-label,
+            #hud .stat-values {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 0;
+                text-align: center;
+            }
+            #hud .stat-values {
+                flex-wrap: wrap;
+            }
+            #hud .val {
+                color: #e8ddd0;
+                font-size: 15px;
+                font-weight: 600;
+            }
+            #hud .val-multiline {
+                display: block;
+                white-space: pre-line;
+                line-height: 1.4;
+            }
+            @media (max-width: 720px) {
+                #hud {
+                    max-width: calc(100vw - 40px);
+                }
+                .hud-panel {
+                    min-width: 160px;
+                    flex: 1 1 160px;
+                }
+            }
+
+            /* Upgrade panel - right side, scrollable */
+            #upgrade-panel {
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 220px;
+                height: 100%;
+                background: rgba(30, 28, 26, 0.92);
+                padding: 16px 12px;
+                overflow-y: auto;
+                pointer-events: all;
+                transform: translateX(100%);
+                transition: transform 0.4s ease;
+                border-left: 1px solid #3a3830;
+            }
+            #upgrade-panel.visible {
+                transform: translateX(0);
+            }
+            #upgrade-panel h3 {
+                color: #c8bfb0;
+                font-size: 13px;
+                letter-spacing: 0.1em;
+                margin-bottom: 14px;
+                text-transform: uppercase;
+            }
+            .panel-action {
+                width: 100%;
+                margin-bottom: 14px;
+                background: rgba(255, 255, 255, 0.06);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                color: #d9cfbf;
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                padding: 8px 10px;
+                cursor: pointer;
+                transition:
+                    transform 0.12s,
+                    background 0.18s,
+                    border-color 0.18s;
+            }
+            .panel-action:hover {
+                transform: translateY(-1px);
+                background: rgba(255, 255, 255, 0.1);
+                border-color: rgba(255, 255, 255, 0.16);
+            }
+            .panel-action:active {
+                transform: translateY(0);
+            }
+            #top-actions {
+                position: absolute;
+                top: 20px;
+                right: calc(220px + 20px);
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                justify-content: flex-end;
+                pointer-events: all;
+                z-index: 1;
+            }
+            #top-actions .panel-action {
+                width: auto;
+                min-width: 92px;
+                margin-bottom: 0;
+                pointer-events: all;
+            }
+            #sound-toggle-btn[aria-pressed="true"] {
+                background: rgba(169, 191, 153, 0.16);
+                border-color: rgba(169, 191, 153, 0.42);
+                color: #eef3e6;
+            }
+            #sound-toggle-btn[aria-pressed="false"] {
+                opacity: 0.76;
+            }
+            #sound-toggle-btn:disabled {
+                opacity: 0.35;
+                cursor: default;
+            }
+
+            .upg-item {
+                margin-bottom: 8px;
+                background: linear-gradient(
+                    135deg,
+                    rgba(255, 255, 255, 0.06) 0%,
+                    rgba(255, 255, 255, 0.02) 100%
+                );
+                border-radius: 6px;
+                padding: 8px 10px;
+                border: 1px solid rgba(255, 255, 255, 0.06);
+                box-shadow:
+                    0 2px 8px rgba(0, 0, 0, 0.25),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            }
+            .upg-item .upg-name {
+                color: #a8a098;
+                font-size: 11px;
+                margin-bottom: 5px;
+                letter-spacing: 0.04em;
+            }
+            .upg-item .upg-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 6px;
+            }
+            .upg-item .upg-val {
+                color: #e0d8cc;
+                font-size: 13px;
+                font-weight: 600;
+            }
+            .upg-item .upg-cost {
+                color: #7a7060;
+                font-size: 11px;
+                flex: 1;
+                text-align: right;
+            }
+            .upg-btn {
+                background: #a8b5a0;
+                border: none;
+                border-radius: 4px;
+                color: #2c2c2c;
+                font-size: 11px;
+                font-weight: 700;
+                padding: 4px 10px;
+                cursor: pointer;
+                transition:
+                    transform 0.1s,
+                    opacity 0.15s,
+                    box-shadow 0.1s;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            }
+            .upg-btn:hover:not(:disabled) {
+                opacity: 0.9;
+                box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+            }
+            .upg-btn:active:not(:disabled) {
+                transform: scale(0.92);
+                box-shadow: none;
+            }
+            .upg-btn:disabled {
+                opacity: 0.28;
+                cursor: default;
+            }
+
+            #money-bar {
+                position: absolute;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(44, 44, 44, 0.9);
+                border-radius: 20px;
+                padding: 6px 20px;
+                color: #e8ddd0;
+                font-size: 15px;
+                font-weight: 700;
+                pointer-events: none;
+                letter-spacing: 0.05em;
+                opacity: 0;
+                transition: opacity 0.4s;
+            }
+            #money-bar.visible {
+                opacity: 1;
+            }
+
+            #victory-overlay {
+                position: absolute;
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 24px;
+                background: rgba(18, 16, 14, 0.76);
+                backdrop-filter: blur(8px);
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                transition:
+                    opacity 0.25s ease,
+                    visibility 0.25s ease;
+                z-index: 30;
+            }
+            #victory-overlay.visible {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: all;
+            }
+            .victory-card {
+                width: min(100%, 420px);
+                padding: 30px 28px 24px;
+                border-radius: 20px;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                background: linear-gradient(
+                    180deg,
+                    rgba(47, 43, 38, 0.96) 0%,
+                    rgba(30, 28, 26, 0.98) 100%
+                );
+                box-shadow:
+                    0 24px 60px rgba(0, 0, 0, 0.36),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+                color: #e8ddd0;
+                text-align: center;
+            }
+            .victory-kicker {
+                margin-bottom: 10px;
+                color: #a9bf99;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.24em;
+                text-transform: uppercase;
+            }
+            .victory-card h2 {
+                margin-bottom: 12px;
+                font-size: 30px;
+                line-height: 1.15;
+                letter-spacing: 0.06em;
+            }
+            .victory-card p {
+                color: #c9beaf;
+                font-size: 14px;
+                line-height: 1.8;
+            }
+            .victory-progress {
+                margin: 22px 0 20px;
+                padding: 14px 18px;
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.05);
+                color: #efe4d6;
+                font-size: 20px;
+                font-weight: 700;
+                letter-spacing: 0.04em;
+            }
+            .victory-progress small {
+                display: block;
+                margin-bottom: 8px;
+                color: #8d8578;
+                font-size: 11px;
+                letter-spacing: 0.16em;
+                text-transform: uppercase;
+            }
+            .victory-action {
+                min-width: 160px;
+                margin: 0 auto;
+                pointer-events: all;
+            }
+            @media (max-width: 640px) {
+                .victory-card {
+                    padding: 26px 20px 22px;
+                }
+                .victory-card h2 {
+                    font-size: 24px;
+                }
+            }
+
+            #toolbar {
+                position: absolute;
+                bottom: 30px;
+                left: 50%;
+                transform: translateX(-50%);
+                display: flex;
+                gap: 12px;
+                pointer-events: all;
+            }
+            .gear-btn {
+                width: 64px;
+                height: 64px;
+                border-radius: 8px;
+                border: none;
+                cursor: pointer;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                font-size: 11px;
+                letter-spacing: 0.04em;
+                transition:
+                    transform 0.1s,
+                    opacity 0.1s;
+                color: #2c2c2c;
+                font-weight: 600;
+            }
+            .gear-btn:hover {
+                transform: translateY(-3px);
+            }
+            .gear-btn:active {
+                transform: translateY(0);
+                opacity: 0.8;
+            }
+            .gear-btn.active {
+                outline: 2px solid #e8ddd0;
+            }
+            #btn-small {
+                background: #a8b5a0;
+            }
+            #btn-large {
+                background: #b5a8a0;
+            }
+            #btn-delete {
+                background: #b5b0a0;
+            }
+
+            #msg {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(180, 80, 80, 0.9);
+                color: #fff;
+                padding: 10px 24px;
+                border-radius: 6px;
+                font-size: 14px;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+            #msg.show {
+                opacity: 1;
+            }
+            #info {
+                position: absolute;
+                bottom: 110px;
+                left: 50%;
+                transform: translateX(-50%);
+                color: #8a8070;
+                font-size: 12px;
+                pointer-events: none;
+                text-align: center;
+            }
+
+            /* Pipeline area label */
+            #pipeline-hint {
+                position: absolute;
+                top: 50%;
+                right: 240px;
+                transform: translateY(-50%);
+                color: #5a5850;
+                font-size: 12px;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.6s;
+                text-align: center;
+                line-height: 1.8;
+            }
+            #pipeline-hint.visible {
+                opacity: 1;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="game-container">
+            <canvas id="game-canvas"></canvas>
+            <div id="ui-layer">
+                <div id="hud">
+                    <div class="hud-panel">
+                        <div class="hud-panel-title" id="hud-panel-title">Status</div>
+                        <div class="stat">
+                            <span class="stat-label" id="label-power"
+                                >Output/Capacity&nbsp;&nbsp;Power</span
+                            >
+                            <span class="stat-values">
+                                <span class="val" id="val-power">0.0</span
+                                >/<span class="val" id="val-power-cap"
+                                    >0.0</span
+                                >
+                                W
+                            </span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label" id="label-torque">Rotor Torque</span>
+                            <span class="stat-values">
+                                <span class="val" id="val-torque">0.00</span>
+                                N*m
+                            </span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label" id="label-efficiency"
+                                >Small/Large/Generator&nbsp;&nbsp;Efficiency</span
+                            >
+                            <span class="stat-values">
+                                <span class="val" id="val-eff-small">80</span
+                                >/<span class="val" id="val-eff-large">40</span
+                                >/<span class="val" id="val-eff-gen">100</span>%
+                            </span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label" id="label-rate"
+                                >Belt/Packer&nbsp;&nbsp;Rate</span
+                            >
+                            <span class="stat-values">
+                                <span class="val" id="val-belt-speed">0.0</span>
+                                px/s /
+                                <span class="val" id="val-packer-speed"
+                                    >0.00</span
+                                >
+                                x
+                            </span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label" id="label-truck">Truck Status/Speed</span>
+                            <span class="stat-values">
+                                <span class="val" id="val-truck-state"
+                                    >Loading 0/5</span
+                                >
+                                /
+                                <span class="val" id="val-truck-speed"
+                                    >0.0</span
+                                >
+                                px/s
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="top-actions">
+                    <button
+                        id="language-toggle-btn"
+                        class="panel-action"
+                        type="button"
+                        onclick="toggleLanguage()"
+                    >
+                        中文
+                    </button>
+                    <button
+                        id="sound-toggle-btn"
+                        class="panel-action"
+                        type="button"
+                        aria-pressed="true"
+                        onclick="toggleSound()"
+                    >
+                        Sound On
+                    </button>
+                    <button
+                        id="new-game-btn"
+                        class="panel-action"
+                        type="button"
+                        onclick="startNewGame()"
+                    >
+                        New Game
+                    </button>
+                </div>
+                <div id="money-bar">$ <span id="val-money">0</span><span id="val-money-goal">/100000</span></div>
+
+                <div id="upgrade-panel">
+                    <h3 id="upgrade-panel-title">Upgrades</h3>
+                    <div id="upg-list"></div>
+                </div>
+
+                <div id="pipeline-hint"></div>
+
+                <div
+                    id="victory-overlay"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-hidden="true"
+                    aria-labelledby="victory-title"
+                >
+                    <div class="victory-card">
+                        <div class="victory-kicker" id="victory-kicker">Stage Clear</div>
+                        <h2 id="victory-title"></h2>
+                        <p id="victory-message"></p>
+                        <div class="victory-progress">
+                            <small id="victory-progress-label"></small>
+                            <span id="victory-money-current">0</span> /
+                            <span id="victory-money-target">100000</span>
+                        </div>
+                        <button
+                            id="victory-continue-btn"
+                            class="panel-action victory-action"
+                            type="button"
+                            onclick="continueAfterVictory()"
+                        ></button>
+                    </div>
+                </div>
+
+                <div id="toolbar">
+                    <button
+                        class="gear-btn active"
+                        id="btn-small"
+                        onclick="selectTool('small')"
+                    >
+                        <svg width="28" height="28" viewBox="0 0 28 28">
+                            <circle
+                                cx="14"
+                                cy="14"
+                                r="10"
+                                fill="#2c2c2c"
+                                opacity="0.3"
+                            />
+                            <circle
+                                cx="14"
+                                cy="14"
+                                r="5"
+                                fill="#2c2c2c"
+                                opacity="0.5"
+                            />
+                        </svg>
+                        <span id="btn-small-label">Small Gear</span>
+                    </button>
+                    <button
+                        class="gear-btn"
+                        id="btn-large"
+                        onclick="selectTool('large')"
+                    >
+                        <svg width="28" height="28" viewBox="0 0 28 28">
+                            <circle
+                                cx="14"
+                                cy="14"
+                                r="13"
+                                fill="#2c2c2c"
+                                opacity="0.3"
+                            />
+                            <circle
+                                cx="14"
+                                cy="14"
+                                r="6"
+                                fill="#2c2c2c"
+                                opacity="0.5"
+                            />
+                        </svg>
+                        <span id="btn-large-label">Large Gear</span>
+                    </button>
+                    <button
+                        class="gear-btn"
+                        id="btn-delete"
+                        onclick="selectTool('delete')"
+                    >
+                        <svg width="28" height="28" viewBox="0 0 28 28">
+                            <line
+                                x1="7"
+                                y1="7"
+                                x2="21"
+                                y2="21"
+                                stroke="#2c2c2c"
+                                stroke-width="3"
+                                stroke-linecap="round"
+                            />
+                            <line
+                                x1="21"
+                                y1="7"
+                                x2="7"
+                                y2="21"
+                                stroke="#2c2c2c"
+                                stroke-width="3"
+                                stroke-linecap="round"
+                            />
+                        </svg>
+                        <span id="btn-delete-label">Delete</span>
+                    </button>
+                </div>
+
+                <div id="info">Click a hex to place a gear - connect to the generator to produce power</div>
+                <div id="msg"></div>
+            </div>
+        </div>
+        <script src="gear-puzzle.js"></script>
+        <script src="gear-pipeline.js"></script>
+    </body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "mashines",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "node build-static.js",
+    "dev": "node dev-server.js",
+    "start": "node dev-server.js"
+  }
+}
